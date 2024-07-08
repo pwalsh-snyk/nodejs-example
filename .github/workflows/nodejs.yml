@@ -20,4 +20,13 @@ jobs:
       run: npm install
 
     - name: Start development server
-      run: npm run start:dev
+      run: |
+        npm run start:dev &
+        sleep 10s  # Replace with appropriate time or command to stop the server
+
+    - name: Stop development server
+      run: |
+        npm run stop:dev  # Replace with appropriate command to stop your server
+
+    - name: Optional cleanup or final steps
+      run: echo "Workflow completed successfully."
