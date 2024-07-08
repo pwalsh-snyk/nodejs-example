@@ -22,7 +22,7 @@ jobs:
     - name: Start development server
       run: |
         npm run start:dev &
-        sleep 10s  # Replace with appropriate time or command to stop the server
+        sleep 5s  # Replace with appropriate time or command to stop the server
 
     - name: Stop development server
       run: |
