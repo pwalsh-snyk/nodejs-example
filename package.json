@@ -32,10 +32,10 @@
     "express": "^4.16.2",
     "helmet": "^3.11.0",
     "lodash": "^4.17.21",
-    "marked": "^0.3.18",
+    "marked": "^0.6.2",
     "morgan": "^1.9.1",
     "pug": "3.0.1",
-    "follow-redirects": "1.15.4"
+    "follow-redirects": "1.15.6"
   },
   "devDependencies": {
     "cheerio": "^1.0.0-rc.2",
