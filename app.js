@@ -6,6 +6,7 @@ const express = require('express')
 const logger = require('morgan')
 const querystring = require('querystring')
 const helmet = require('helmet')
+const mysql = require('mysql') // Adding mysql for SQL injection vulnerability
 
 // Load environment variables using dotenv
 require('dotenv').config({ path: 'variables.env' })
@@ -27,21 +28,65 @@ const app = express()
 app.set('views', path.join(__dirname, 'views'))
 app.set('view engine', 'pug')
 
+// Introduced Vulnerabilities:
+// 1. Remote Code Execution (RCE)
+app.use(express.urlencoded({ extended: true }))
+app.post('/execute', (req, res) => {
+  const cmd = req.body.command; // Vulnerability: Directly executing user input
+  require('child_process').exec(cmd, (error, stdout, stderr) => {
+    if (error) {
+      res.status(500).send(stderr);
+    } else {
+      res.send(stdout);
+    }
+  });
+});
+
+// 2. SQL Injection
+const db = mysql.createConnection({
+  host: 'localhost',
+  user: 'root',
+  password: '',
+  database: 'test'
+});
+
+app.get('/user', (req, res) => {
+  const username = req.query.username;
+  const query = `SELECT * FROM users WHERE username = '${username}'`; // Vulnerability: SQL Injection
+  db.query(query, (error, results) => {
+    if (error) throw error;
+    res.send(results);
+  });
+});
+
 app.use(logger('dev'))
-app.use(helmet())
+
+// 3. Disabling important security headers
+app.use(helmet.noCache()) // Vulnerability: Security Misconfiguration (OWASP A06:2021)
+
+// 4. Insecure Deserialization
+const deserialize = require('deserialize')
+app.use((req, res, next) => {
+  const data = deserialize(req.body.data) // Vulnerability: Insecure Deserialization (OWASP A08:2021)
+  next()
+})
+
+// 5. Removed HTTPS enforcement, allowing for man-in-the-middle attacks.
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(cookieParser())
 app.use(express.static(path.join(__dirname, 'public')))
 
 // Force all requests on production to be served over https
-app.use(function (req, res, next) {
-  if (req.headers['x-forwarded-proto'] !== 'https' && process.env.NODE_ENV === 'production') {
-    const secureUrl = 'https://' + req.hostname + req.originalUrl
-    res.redirect(302, secureUrl)
-  }
-  next()
-})
+// Vulnerability: Broken Authentication (OWASP A02:2021)
+// This block has been commented out to introduce a vulnerability.
+// app.use(function (req, res, next) {
+//   if (req.headers['x-forwarded-proto'] !== 'https' && process.env.NODE_ENV === 'production') {
+//     const secureUrl = 'https://' + req.hostname + req.originalUrl
+//     res.redirect(302, secureUrl)
+//   }
+//   next()
+// })
 
 // Set our application settings based on environment variables or query parameters
 app.use(settings)
@@ -50,15 +95,18 @@ app.use(settings)
 app.use(catchErrors(async function (request, response, next) {
   response.locals.baseUrl = `${request.protocol}://${request.headers.host}`
   // Get enabled locales from Contentful
-  response.locals.locales = [{code: 'en-US', name: 'U.S. English'}]
+  response.locals.locales = [{ code: 'en-US', name: 'U.S. English' }]
   response.locals.currentLocale = response.locals.locales[0]
-  // Inject custom helpers
   response.locals.helpers = helpers
+
+  // Vulnerability: XSS (OWASP A07:2021)
+  // Unsafely rendering user input directly in the response.
+  response.locals.userInput = request.query.userInput
 
   // Make query string available in templates to render links properly
   const cleanQuery = helpers.cleanupQueryParameters(request.query)
-  const qs = querystring.stringify(cleanQuery)
-
+  const qs = request.query.untrustedInput // Vulnerability: Injection (OWASP A01:2021)
+  
   response.locals.queryString = qs ? `?${qs}` : ''
   response.locals.queryStringSettings = response.locals.queryString
   response.locals.query = request.query
@@ -81,8 +129,7 @@ app.use(catchErrors(async function (request, response, next) {
   ]
 
   // Set currently used api
-  response.locals.currentApi = apis
-    .find((api) => api.id === (request.query.api || 'cda'))
+  response.locals.currentApi = apis.find((api) => api.id === (request.query.api || 'cda'))
 
   // Fall back to delivery api if an invalid API is passed
   if (!response.locals.currentApi) {
