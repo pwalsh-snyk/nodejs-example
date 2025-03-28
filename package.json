@@ -33,7 +33,7 @@
     "follow-redirects": "1.15.4",
     "helmet": "^3.21.1",
     "lodash": "^4.17.21",
-    "marked": "^0.3.18",
+    "marked": "^0.8.2",
     "morgan": "^1.9.1",
     "pug": "3.0.3",
     "qrious": "^4.0.2"
