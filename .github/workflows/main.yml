@@ -3,11 +3,13 @@ name: Continuous Snyk Monitoring
 on:
   push:
     branches:
-      - master  # Adjust as needed
+      - main  # You can adjust this to match your target branch
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
 
 jobs:
   snyk-monitor:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
