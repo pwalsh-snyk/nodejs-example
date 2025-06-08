@@ -1,14 +1,29 @@
-name: Snyk CI
-on: [push]
+name: Continuous Snyk Monitoring
+
+on:
+  push:
+    branches:
+      - master  # Adjust as needed
+
 jobs:
-  test:
+  snyk-monitor:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Run Snyk to check for vulnerabilities
-        uses: snyk/actions/node@master
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          args: --severity-threshold=high
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run snyk monitor
+        uses: snyk/actions/node@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-       ## continue-on-error: true
+        with:
+          command: monitor
+          args: --all-projects
